@@ -213,7 +213,7 @@ class App(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.settings = QSettings("YT2MP", "YT2MP")
+        self.settings = QSettings("YTMedia", "YTMedia")
         self.thread = None
         self.meta_thread = None
         self.queue = []
@@ -223,7 +223,7 @@ class App(QWidget):
         self.net = QNetworkAccessManager(self)
         self._clear_logs_before_next_start = False
 
-        self.setWindowTitle("YT2MP - Youtube Video Dowloader by Qorym")
+        self.setWindowTitle("YTMedia - Youtube Video Dowloader by Qorym")
         self.setMinimumSize(950, 800)
 
         root = QVBoxLayout()
@@ -261,13 +261,16 @@ class App(QWidget):
         self.preview_btn.setToolTip("Validate the link and find avaiable quality options")
         self.preview_btn.clicked.connect(self.preview_url)
 
-        url_row.addWidget(QLabel("Video/Playlist Link:"))
+        url_row_lbl = QLabel("Video/Playlist Link:")
+        url_row_lbl.setFont(load_font())
+        url_row.addWidget(url_row_lbl)
         url_row.addWidget(self.url_input, 1)
         url_row.addWidget(self.preview_btn)
         url_layout.addLayout(url_row)
 
         self.loading_label = QLabel("")
         self.loading_label.setStyleSheet("color: #8ab4f8; font-weight: bold;")
+        self.loading_label.setFont(load_font())
         url_layout.addWidget(self.loading_label)
         p1_layout.addWidget(url_frame)
 
@@ -275,7 +278,9 @@ class App(QWidget):
 
         # Page 1's HIstory table
         hist_lbl = QLabel("<b>Past Downloads</b>")
+        hist_lbl.setFont(load_font())
         self.history_table = QTableWidget(0, 3)
+        self.history_table.setFont(load_font())
         self.history_table.setHorizontalHeaderLabels(["Title", "Status", "Time"])
         self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -287,3 +292,25 @@ class App(QWidget):
         self.stacked_widget.addWidget(self.page1)
 
         # --- PAGE 2: Options and preview ---
+        self.page2 = QWidget()
+        p2_layout = QVBoxLayout(self.page2)
+        p2_layout.setAlignment(Qt.AlignTop)
+
+        # MEtadata
+        meta_frame = QWidget()
+        meta_frame.setObjectName("Card")
+        meta_row = QHBoxLayout(meta_frame)
+        self.thumb_label = QLabel("Thumbnail\nHere")
+        self.thumb_label.setFont(load_font())
+        self.thumb_label.setFixedSize(240, 135)
+        self.thumb_label.setAlignment(Qt.AlignCenter)
+        self.thumb_label.setStyleSheet("background: #2b2b2b; color: #888; border: 1px solid #444; border-radius: 8px;")
+        self.meta_label = QLabel("<b>Status</b> Ready\n<br><br><b>Video details:</b>\nTitle: -- \nDuration: -- \nChannel: --")
+        self.meta_label.setFont(load_font())
+        self.meta_label.setWordWrap(True)
+        self.meta_label.setStyleSheet("padding: 10px;")
+        meta_row.addWidget(self.thumb_label)
+        meta_row.addWidget(self.meta_label, 1)
+        p2_layout.addWidget(meta_frame)
+
+        # Settings
