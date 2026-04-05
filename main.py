@@ -353,3 +353,83 @@ class App(QWidget):
         self.max_items.setPrefix("Max items (0=all): ")
         self.max_items.setMinimumHeight(35)
         self.mp3_bitrate_box = QComboBox()
+        self.mp3_bitrate_box.addItems(["128", "192", "256", "320"])
+        self.mp3_bitrate_box.setCurrentText(self.settings.value("mp3_bitrate", "192"))
+        self.mp3_bitrate_box.setMinimumHeight(35)
+        settings_layout.addWidget(self.playlist_check, 2, 0)
+        settings_layout.addWidget(self.max_items, 2, 1)
+        bitrate_lbl = QLabel(":")
+
+app = QApplication(sys.argv)
+app.setWindowIcon(QIcon("icon.ico"))
+app.setFont(load_font())
+app.setStyleSheet(f"""
+    QWidget {{
+        background-color: #202124;
+        color: f1f3f4;
+        font-family: {load_font().family()};
+        font-size: 10pt;
+    }}
+    #Card {{
+        background-color: #2b2b2b;
+        border-radius: 8px;
+        border: 1px solid #3c3c3c;
+        font-family: {load_font().family()};
+    }}
+    QLineEdit, QTextEdit , QComboBox, QSpinBox , QTableWidget {{
+        background-color: #303134;
+        color: #e8eaed;
+        border: 1px solid #5f6368; 
+        border-radius: 5px; 
+        padding: 5px 12px; 
+        font-family: {load_font().family()};
+        font-weight: bold;
+    }}
+    QPushButton:hover {{ 
+        background-color: #4a4d51; 
+    }}
+    QPushButton:pressed {{
+        background-color: #55585d; 
+    }}
+    QPushButton:disabled {{ 
+        color: #888; 
+        border: 1px solid #444; 
+        background: #2f2f2f; 
+    }}
+    #PrimaryButton {{
+        background-color: #4169E1; 
+        color: white; 
+        border: none; 
+    }}
+    #PrimaryButton:hover {{ 
+        background-color: #2754e3; 
+    }}
+    QProgressBar {{ 
+        border: 1px solid #5f6368; 
+        border-radius: 5px; 
+        text-align: center; 
+        font-weight: bold; 
+        background: #303134; 
+    }}
+    QProgressBar::chunk {{ 
+        background-color: #34a853; 
+        border-radius: 4px; 
+    }}
+    QTableWidget {{ 
+        gridline-color: #444; 
+        border: 1px solid #444;
+        font-family: {load_font().family()}; 
+    }}
+    QHeaderView::section {{ 
+        background-color: #3c4043; 
+        padding: 4px; 
+        border: 1px solid #444; 
+        font-weight: bold; 
+        font-family: {load_font().family()};
+    }}
+    QTableWidget::item:selected {{ 
+        background-color: #4169E1; 
+        color: white; 
+        font-family: {load_font().family()};
+    }}
+""")
