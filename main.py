@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLineEdit, QPushButton, QTextEdit, QLabel, QComboBox, QFileDialog,
     QCheckBox, QSpinBox, QProgressBar, QTableWidget, QTableWidgetItem,
-    QMessageBox, QHeaderView, QAbstractItemView, QMenu, QStackedWidget
+    QMessageBox, QHeaderView, QAbstractItemView, QMenu, QStackedWidget, QMainWindow
 )
 
 #Load the font ttf
@@ -358,7 +358,49 @@ class App(QWidget):
         self.mp3_bitrate_box.setMinimumHeight(35)
         settings_layout.addWidget(self.playlist_check, 2, 0)
         settings_layout.addWidget(self.max_items, 2, 1)
-        bitrate_lbl = QLabel(":")
+        bitrate_lbl = QLabel("MP3 kbps:")
+        bitrate_lbl.setFont(load_font())
+        settings_layout.addWidget(bitrate_lbl, 2, 2)
+        settings_layout.addWidget(self.mp3_bitrate_box, 2, 3)
+        p2_layout.addWidget(settings_frame)
+
+        # Advanced Settings
+        adv_frame = QWidget()
+        adv_frame.setObjectName("Card")
+        adv_layout = QHBoxLayout(adv_frame)
+        self.open_folder_check = QCheckBox("Open folder after")
+        self.open_folder_check.setChecked(True)
+        self.copy_path_check = QCheckBox("Copy path")
+        self.template_input = QLineEdit(self.settings.value("template", "%(title)s.%(ext)s"))
+        self.template_input.setPlaceholderText("Name template")
+        self.cookies_input = QLineEdit(self.settings.value("cookies", ""))
+        self.cookies_input.setPlaceholderText("Cookies.txt path")
+        self.cookies_btn = QPushButton("Cookies..")
+        self.cookies_btn.clicked.connect(self.pick_cookies)
+
+        adv_layout.addWidget(self.open_folder_check)
+        adv_layout.addWidget(self.copy_path_check)
+        adv_layout.addWidget(QLabel(" Template:"))
+        adv_layout.addWidget(self.template_input)
+        adv_layout.addWidget(self.cookies_input)
+        adv_layout.addWidget(self.cookies_btn)
+        p2_layout.addWidget(adv_frame)
+
+        p2_layout.addStretch()
+
+        p2_controls = QHBoxLayout()
+        self.back_btn1 = QPushButton("🡄 Back")
+        self.back_btn1.setMinimumHeight(40)
+        self.back_btn1.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
+        self.download_btn = QPushButton("Start Download ➔")
+        self.download_btn.setObjectName("PrimaryButton")
+        self.download_btn.setMinimumHeight(40)
+        self.download_btn.clicked.connect(self.start_download)
+        p2_controls.addWidget(self.back_btn1, 1)
+        p2_controls.addWidget(self.download_btn, 3)
+        p2_layout.addLayout(p2_controls)
+
+        self.stacked_widget.addWidget(self.page2)
 
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon("icon.ico"))
@@ -433,3 +475,7 @@ app.setStyleSheet(f"""
         font-family: {load_font().family()};
     }}
 """)
+
+window = App()
+window.show()
+sys.exit(app.exec())
