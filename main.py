@@ -402,6 +402,68 @@ class App(QWidget):
 
         self.stacked_widget.addWidget(self.page2)
 
+        # --- PAGE 3: Download progress and logs ---
+        self.page3 = QWidget()
+        p3_layout = QVBoxLayout(self.page3)
+
+        prog_frame = QWidget()
+        prog_frame.setObjectName("Card")
+        prog_layout = QVBoxLayout(prog_frame)
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        self.progress.setTextVisible(True)
+        self.progress.setMinimumHeight(30)
+        self.stats_label = QLabel("Time Remaining: -- | Downloaded: -- / -- | Speed: --")
+        self.stats_label.setFont(load_font())
+        self.stats_label.setAlignment(Qt.AlignCenter)
+        prog_layout.addWidget(self.progress)
+        prog_layout.addWidget(self.stats_label)
+        p3_layout.addWidget(prog_frame)
+
+        # Queue
+        queue_lbl = QLabel("<b>Download Queue</b>")
+        queue_lbl.setFont(load_font())
+        self.queue_table = QTableWidget(0, 2)
+        self.queue_table.setHorizontalHeaderLabels(["URL", "Requested Format"])
+        self.queue_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.queue_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+        self.remove_queue_btn = QPushButton("Remove selected from queue")
+        self.remove_queue_btn.clicked.connect(self.remove_selected_queue_item)
+
+        p3_layout.addWidget(queue_lbl)
+        p3_layout.addWidget(self.queue_table, 1)
+        p3_layout.addWidget(self.remove_queue_btn)
+
+        log_lbl = QLabel("<b>Export Logs</b>")
+        self.log = QTextEdit()
+        self.log.setReadOnly(True)
+        p3_layout.addWidget(log_lbl)
+        p3_layout.addWidget(self.log, 2)
+
+        p3_controls = QHBoxLayout()
+        self.pause_btn = QPushButton("Pause")
+        self.resume_btn = QPushButton("Resume")
+        self.cancel_btn = QPushButton("Cancel")
+        self.retry_btn = QPushButton("Retry")
+        for b in [self.pause_btn, self.resume_btn, self.cancel_btn, self.retry_btn]:
+            b.setMinimumHeight(40)
+        self.pause_btn.clicked.connect(self.pause_current)
+        self.resume_btn.clicked.connect(self.resume_current)
+        self.cancel_btn.clicked.connect(self.cancel_current)
+        self.retry_btn.clicked.connect(self.retry_last)
+        for b in (self.pause_btn, self.resume_btn, self.cancel_btn):
+            b.setEnabled(False)
+
+        p3_controls.addWidget(self.pause_btn)
+        p3_controls.addWidget(self.resume_btn)
+        p3_controls.addWidget(self.cancel_btn)
+        p3_controls.addWidget(self.retry_btn)
+        p3_layout.addLayout(p3_controls)
+
+        self.stacked_widget.addWidget(self.page3)
+
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon("icon.ico"))
 app.setFont(load_font())
