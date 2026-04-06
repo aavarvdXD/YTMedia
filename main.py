@@ -464,6 +464,56 @@ class App(QWidget):
 
         self.stacked_widget.addWidget(self.page3)
 
+        # --- PAGE 4: Success view ---
+        self.page4 = QWidget()
+        p4_layout = QVBoxLayout(self.page4)
+        p4_layout.setAlignment(Qt.AlignCenter)
+
+        self.success_icon = QLabel("✅")
+        font_icon = self.success_icon.font()
+        font_icon.setPointSize(60)
+        self.success_icon.setFont(font_icon)
+        self.success_icon.setAlignment(Qt.AlignCenter)
+
+        self.success_title = QLabel("Video Exported Successfully!")
+        font_title = load_font()
+        font_title.setPointSize(24)
+        font_title.setBold(True)
+        self.success_title.setFont(font_title)
+        self.success_title.setAlignment(Qt.AlignCenter)
+
+        self.success_path = QLabel("Path...")
+        self.success_path.setFont(load_font())
+        self.success_path.setAlignment(Qt.AlignCenter)
+        self.success_path.setStyleSheet("""
+            color: #8ab4f8;
+            margin-top: 15px;
+            margin-bottom: 30px;
+        """)
+
+        p4_btns = QHBoxLayout()
+        self.open_exported_btn = QPushButton("Open Folder")
+        self.open_exported_btn.setFont(load_font())
+        self.open_exported_btn.setMinimumHeight(50)
+
+        self.new_download_btn = QPushButton("Start Another Download")
+        self.new_download_btn.setFont(load_font())
+        self.new_download_btn.setObjectName("PrimaryButton")
+        self.new_download_btn.setMinimumHeight(50)
+        self.new_download_btn.clicked.connect(self.reset_to_start)
+
+        p4_btns.addWidget(self.open_exported_btn, 1)
+        p4_btns.addWidget(self.new_download_btn, 2)
+
+        p4_layout.addWidget(self.success_icon)
+        p4_layout.addWidget(self.success_title)
+        p4_layout.addWidget(self.success_path)
+        p4_layout.addLayout(p4_btns)
+
+        self.stacked_widget.addWidget(self.page4)
+
+        self.setLayout(root)
+        self.restoreGeometry(self.settings.value("geometry", QByteArray()))
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon("icon.ico"))
 app.setFont(load_font())
