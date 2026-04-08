@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 
 #Load the font ttf
 font_id = QFontDatabase.addApplicationFont("font.ttf")
-def load_font():
+def font():
     if font_id != -1:
         family_names = QFontDatabase.applicationFontFamilies(font_id)
         if family_names:
@@ -231,9 +231,9 @@ class App(QWidget):
         root.setContentsMargins(20, 20, 20, 20)
 
         #Title, Header
-        load_font()
+        font()
         header_label = QLabel("YT2MP Downloader Wizard")
-        header_label.setFont(load_font())
+        header_label.setFont(font())
         header_label.setAlignment(Qt.AlignCenter)
         root.addWidget(header_label)
 
@@ -262,7 +262,7 @@ class App(QWidget):
         self.preview_btn.clicked.connect(self.preview_url)
 
         url_row_lbl = QLabel("Video/Playlist Link:")
-        url_row_lbl.setFont(load_font())
+        url_row_lbl.setFont(font())
         url_row.addWidget(url_row_lbl)
         url_row.addWidget(self.url_input, 1)
         url_row.addWidget(self.preview_btn)
@@ -270,7 +270,7 @@ class App(QWidget):
 
         self.loading_label = QLabel("")
         self.loading_label.setStyleSheet("color: #8ab4f8; font-weight: bold;")
-        self.loading_label.setFont(load_font())
+        self.loading_label.setFont(font())
         url_layout.addWidget(self.loading_label)
         p1_layout.addWidget(url_frame)
 
@@ -278,9 +278,9 @@ class App(QWidget):
 
         # Page 1's HIstory table
         hist_lbl = QLabel("<b>Past Downloads</b>")
-        hist_lbl.setFont(load_font())
+        hist_lbl.setFont(font())
         self.history_table = QTableWidget(0, 3)
-        self.history_table.setFont(load_font())
+        self.history_table.setFont(font())
         self.history_table.setHorizontalHeaderLabels(["Title", "Status", "Time"])
         self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -301,12 +301,12 @@ class App(QWidget):
         meta_frame.setObjectName("Card")
         meta_row = QHBoxLayout(meta_frame)
         self.thumb_label = QLabel("Thumbnail\nHere")
-        self.thumb_label.setFont(load_font())
+        self.thumb_label.setFont(font())
         self.thumb_label.setFixedSize(240, 135)
         self.thumb_label.setAlignment(Qt.AlignCenter)
         self.thumb_label.setStyleSheet("background: #2b2b2b; color: #888; border: 1px solid #444; border-radius: 8px;")
         self.meta_label = QLabel("<b>Status</b> Ready\n<br><br><b>Video details:</b>\nTitle: -- \nDuration: -- \nChannel: --")
-        self.meta_label.setFont(load_font())
+        self.meta_label.setFont(font())
         self.meta_label.setWordWrap(True)
         self.meta_label.setStyleSheet("padding: 10px;")
         meta_row.addWidget(self.thumb_label)
@@ -322,10 +322,10 @@ class App(QWidget):
         self.folder_input = QLineEdit(self.settings.value("last_folder", os.path.expanduser("~")))
         self.folder_input.setMinimumHeight(35)
         self.browse_btn = QPushButton("Browse")
-        self.browse_btn.setFont(load_font())
+        self.browse_btn.setFont(font())
         self.browse_btn.clicked.connect(self.pick_folder)
         settings_layout_lbl = QLabel("Save to:")
-        settings_layout_lbl.setFont(load_font())
+        settings_layout_lbl.setFont(font())
         settings_layout.addWidget(settings_layout_lbl, 0, 0)
         settings_layout.addWidget(self.folder_input, 0, 1, 1, 2)
         settings_layout.addWidget(self.browse_btn, 0, 3)
@@ -359,7 +359,7 @@ class App(QWidget):
         settings_layout.addWidget(self.playlist_check, 2, 0)
         settings_layout.addWidget(self.max_items, 2, 1)
         bitrate_lbl = QLabel("MP3 kbps:")
-        bitrate_lbl.setFont(load_font())
+        bitrate_lbl.setFont(font())
         settings_layout.addWidget(bitrate_lbl, 2, 2)
         settings_layout.addWidget(self.mp3_bitrate_box, 2, 3)
         p2_layout.addWidget(settings_frame)
@@ -415,7 +415,7 @@ class App(QWidget):
         self.progress.setTextVisible(True)
         self.progress.setMinimumHeight(30)
         self.stats_label = QLabel("Time Remaining: -- | Downloaded: -- / -- | Speed: --")
-        self.stats_label.setFont(load_font())
+        self.stats_label.setFont(font())
         self.stats_label.setAlignment(Qt.AlignCenter)
         prog_layout.addWidget(self.progress)
         prog_layout.addWidget(self.stats_label)
@@ -423,7 +423,7 @@ class App(QWidget):
 
         # Queue
         queue_lbl = QLabel("<b>Download Queue</b>")
-        queue_lbl.setFont(load_font())
+        queue_lbl.setFont(font())
         self.queue_table = QTableWidget(0, 2)
         self.queue_table.setHorizontalHeaderLabels(["URL", "Requested Format"])
         self.queue_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -476,14 +476,14 @@ class App(QWidget):
         self.success_icon.setAlignment(Qt.AlignCenter)
 
         self.success_title = QLabel("Video Exported Successfully!")
-        font_title = load_font()
+        font_title = font()
         font_title.setPointSize(24)
         font_title.setBold(True)
         self.success_title.setFont(font_title)
         self.success_title.setAlignment(Qt.AlignCenter)
 
         self.success_path = QLabel("Path...")
-        self.success_path.setFont(load_font())
+        self.success_path.setFont(font())
         self.success_path.setAlignment(Qt.AlignCenter)
         self.success_path.setStyleSheet("""
             color: #8ab4f8;
@@ -493,11 +493,11 @@ class App(QWidget):
 
         p4_btns = QHBoxLayout()
         self.open_exported_btn = QPushButton("Open Folder")
-        self.open_exported_btn.setFont(load_font())
+        self.open_exported_btn.setFont(font())
         self.open_exported_btn.setMinimumHeight(50)
 
         self.new_download_btn = QPushButton("Start Another Download")
-        self.new_download_btn.setFont(load_font())
+        self.new_download_btn.setFont(font())
         self.new_download_btn.setObjectName("PrimaryButton")
         self.new_download_btn.setMinimumHeight(50)
         self.new_download_btn.clicked.connect(self.reset_to_start)
@@ -514,21 +514,76 @@ class App(QWidget):
 
         self.setLayout(root)
         self.restoreGeometry(self.settings.value("geometry", QByteArray()))
+
+        def reset_to_start(self):
+            self.url_input.setText("")
+            self.loading_label.setText("")
+            self.stacked_widget.setCurrentIndex(0)
+
+        def pick_folder(self):
+            folder = QFileDialog.getExistingDirectory(self, "Select output folder", self.folder_input.text() or os.path.expanduser("~"))
+            if folder:
+                self.folder_input.setText(folder)
+
+        def pick_cookies(self):
+            f, _ = QFileDialog.getOpenFileName(self, "Select cookies file", "", "Text Files (*.txt);;All Files (*)")
+            if f:
+                self.cookies_input.setText(f)
+
+        def _is_valid_url(self, url):
+            return bool(re.match(r"^https?://", url))
+
+        def preview_url(self):
+            url = self.url_input.text().strip()
+            if not self._is_valid_url(url):
+                self.loading_label.setText("Invalid URL, please provide a valid link")
+                self.update_log("Invalid URL.")
+                return
+            if self.meta_thread and self.meta_thread.isRunning():
+                self.loading_label.setText("Metadata request already running...")
+                return
+
+            self.loading_label.setText("Fetching metadata, please wait...")
+            self.preview_btn.setEnabled(False)
+            self._set_status("Fetching metadata")
+
+            t = DownloadThread({"url": url,}, mode="metadata")
+            t.metadata_signal.connect(self.on_metadata)
+            t.error_signal.connect(self.on_metadata_error)
+            t.finished.connect(lambda: self._cleanup_meta_thread(t))
+            t.start()
+            self.meta_thread = t
+
+        def _cleanup_meta_thread(self, t):
+            if self.meta_thread is t:
+                self.meta_thread = None
+            t.deleteLater()
+
+        def on_metadata_error(self, msg):
+            self.loading_label.setText(f"{msg}")
+            self.preview_btn.setEnabled(True)
+            self._set_status("Error")
+            self.update_log(f"{msg}")
+
+        def on_metadata(self, info):
+            self.loading_label.setText("")
+            self.preview_btn.setEnabled(True)
+
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon("icon.ico"))
-app.setFont(load_font())
+app.setFont(font())
 app.setStyleSheet(f"""
     QWidget {{
         background-color: #202124;
         color: f1f3f4;
-        font-family: {load_font().family()};
+        font-family: {font().family()};
         font-size: 10pt;
     }}
     #Card {{
         background-color: #2b2b2b;
         border-radius: 8px;
         border: 1px solid #3c3c3c;
-        font-family: {load_font().family()};
+        font-family: {font().family()};
     }}
     QLineEdit, QTextEdit , QComboBox, QSpinBox , QTableWidget {{
         background-color: #303134;
@@ -536,7 +591,7 @@ app.setStyleSheet(f"""
         border: 1px solid #5f6368; 
         border-radius: 5px; 
         padding: 5px 12px; 
-        font-family: {load_font().family()};
+        font-family: {font().family()};
         font-weight: bold;
     }}
     QPushButton:hover {{ 
@@ -572,19 +627,19 @@ app.setStyleSheet(f"""
     QTableWidget {{ 
         gridline-color: #444; 
         border: 1px solid #444;
-        font-family: {load_font().family()}; 
+        font-family: {font().family()}; 
     }}
     QHeaderView::section {{ 
         background-color: #3c4043; 
         padding: 4px; 
         border: 1px solid #444; 
         font-weight: bold; 
-        font-family: {load_font().family()};
+        font-family: {font().family()};
     }}
     QTableWidget::item:selected {{ 
         background-color: #4169E1; 
         color: white; 
-        font-family: {load_font().family()};
+        font-family: {font().family()};
     }}
 """)
 
