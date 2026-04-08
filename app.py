@@ -342,89 +342,124 @@ class App(QWidget):
         self.setLayout(root)
         self.restoreGeometry(self.settings.value("geometry", QByteArray()))
 
-        def reset_to_start(self):
-            self.url_input.setText("")
-            self.loading_label.setText("")
-            self.stacked_widget.setCurrentIndex(0)
+    def reset_to_start(self):
+        self.url_input.setText("")
+        self.loading_label.setText("")
+        self.stacked_widget.setCurrentIndex(0)
 
-        def pick_folder(self):
-            folder = QFileDialog.getExistingDirectory(self, "Select output folder", self.folder_input.text() or os.path.expanduser("~"))
-            if folder:
-                self.folder_input.setText(folder)
+    def pick_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select output folder", self.folder_input.text() or os.path.expanduser("~"))
+        if folder:
+            self.folder_input.setText(folder)
 
-        def pick_cookies(self):
-            f, _ = QFileDialog.getOpenFileName(self, "Select cookies file", "", "Text Files (*.txt);;All Files (*)")
-            if f:
-                self.cookies_input.setText(f)
+    def pick_cookies(self):
+        f, _ = QFileDialog.getOpenFileName(self, "Select cookies file", "", "Text Files (*.txt);;All Files (*)")
+        if f:
+            self.cookies_input.setText(f)
 
-        def _is_valid_url(self, url):
-            return bool(re.match(r"^https?://", url))
+    def _is_valid_url(self, url):
+        return bool(re.match(r"^https?://", url))
 
-        def preview_url(self):
-            url = self.url_input.text().strip()
-            if not self._is_valid_url(url):
-                self.loading_label.setText("Invalid URL, please provide a valid link")
-                self.update_log("Invalid URL.")
-                return
-            if self.meta_thread and self.meta_thread.isRunning():
-                self.loading_label.setText("Metadata request already running...")
-                return
+    def preview_url(self):
+        url = self.url_input.text().strip()
+        if not self._is_valid_url(url):
+            self.loading_label.setText("Invalid URL, please provide a valid link")
+            self.update_log("Invalid URL.")
+            return
+        if self.meta_thread and self.meta_thread.isRunning():
+            self.loading_label.setText("Metadata request already running...")
+            return
 
-            self.loading_label.setText("Fetching metadata, please wait...")
-            self.preview_btn.setEnabled(False)
-            self._set_status("Fetching metadata")
+        self.loading_label.setText("Fetching metadata, please wait...")
+        self.preview_btn.setEnabled(False)
+        self._set_status("Fetching metadata")
 
-            t = DownloadThread({"url": url,}, mode="metadata")
-            t.metadata_signal.connect(self.on_metadata)
-            t.error_signal.connect(self.on_metadata_error)
-            t.finished.connect(lambda: self._cleanup_meta_thread(t))
-            t.start()
-            self.meta_thread = t
+        t = DownloadThread({"url": url,}, mode="metadata")
+        t.metadata_signal.connect(self.on_metadata)
+        t.error_signal.connect(self.on_metadata_error)
+        t.finished.connect(lambda: self._cleanup_meta_thread(t))
+        t.start()
+        self.meta_thread = t
 
-        def _cleanup_meta_thread(self, t):
-            if self.meta_thread is t:
-                self.meta_thread = None
-            t.deleteLater()
+    def _cleanup_meta_thread(self, t):
+        if self.meta_thread is t:
+            self.meta_thread = None
+        t.deleteLater()
 
-        def on_metadata_error(self, msg):
-            self.loading_label.setText(f"{msg}")
-            self.preview_btn.setEnabled(True)
-            self._set_status("Error")
-            self.update_log(f"{msg}")
+    def on_metadata_error(self, msg):
+        self.loading_label.setText(f"{msg}")
+        self.preview_btn.setEnabled(True)
+        self._set_status("Error")
+        self.update_log(f"{msg}")
 
-        def on_metadata(self, info):
-            self.loading_label.setText("")
-            self.preview_btn.setEnabled(True)
-            self.stacked_widget.setCurrentIndex(1)
+    def on_metadata(self, info):
+        self.loading_label.setText("")
+        self.preview_btn.setEnabled(True)
+        self.stacked_widget.setCurrentIndex(1)
 
-            self.current_info = info or {}
-            title = self.current_info.get("title", "")
-            channel = self.current_info.get("channel", "")
-            duration = self.current_info.get("duration_string", str(self.current_info.get("duration", "")))
-            self.meta_label.setText(f"<b>Status:</b> Ready\n<br><br><b>Video details:</b>\nTitle: {title}\nChannel: {channel}\nDuration: {duration}")
-            self.populate_formats(self.current_info)
-            thumb = self.current_info.get("thumbnail", "")
-            if thumb:
-                self.net.get(QNetworkRequest(QUrl(thumb))).finished.connect(self._on_thumb_loaded)
-            self.update_log(f"Metadata loaded")
+        self.current_info = info or {}
+        title = self.current_info.get("title", "")
+        channel = self.current_info.get("channel", "")
+        duration = self.current_info.get("duration_string", str(self.current_info.get("duration", "")))
+        self.meta_label.setText(f"<b>Status:</b> Ready\n<br><br><b>Video details:</b>\nTitle: {title}\nChannel: {channel}\nDuration: {duration}")
+        self.populate_formats(self.current_info)
+        thumb = self.current_info.get("thumbnail", "")
+        if thumb:
+            self.net.get(QNetworkRequest(QUrl(thumb))).finished.connect(self._on_thumb_loaded)
+        self.update_log(f"Metadata loaded")
 
-        def on_thumb_loaded(self):
-            reply = self.sender()
-            data = reply.readAll()
-            px = QPixmap()
-            if px.loadFromData(data):
-                self.thumb_label.setPixmap(px.scaled(self.thumb_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
-            reply.deleteLater()
+    def on_thumb_loaded(self):
+        reply = self.sender()
+        data = reply.readAll()
+        px = QPixmap()
+        if px.loadFromData(data):
+            self.thumb_label.setPixmap(px.scaled(self.thumb_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        reply.deleteLater()
 
-        def build_task(self):
-            return {
-                "url": self.url_input.text().strip(),
-                "folder": self.folder_input.text().strip() or os.path.expanduser("~"),
-                "template": self.template_input.text().strip() or "%(title)s.%(ext)s",
-                "format_id": self.format_box.currentData(),
-                "convert_mode": self.convert_box.currentText(),
-                "playlist": self.playlist_check.isChecked(),
-                "max_items": self.max_items.value(),
-                "mp3_bitrate": self.mp3_bitrate_box.currentText(),
-                "cookies": self.cookies_input.text().strip(),
-            }
+    def build_task(self):
+        return {
+            "url": self.url_input.text().strip(),
+            "folder": self.folder_input.text().strip() or os.path.expanduser("~"),
+            "template": self.template_input.text().strip() or "%(title)s.%(ext)s",
+            "format_id": self.format_box.currentData(),
+            "convert_mode": self.convert_box.currentText(),
+            "playlist": self.playlist_check.isChecked(),
+            "max_items": self.max_items.value(),
+            "mp3_bitrate": self.mp3_bitrate_box.currentText(),
+            "cookies": self.cookies_input.text().strip(),
+        }
+
+    def _set_status(self, text :str):
+        cur = self.meta_label.text().split("<br><br>", 1)
+        preview = cur[1] if len(cur) > 1 else "<b>Video details:</b>\nTitle: -- \nDuration: -- \nChannel: --"
+        self.meta_label.setText(f"<b>Status:</b> {text}\n<br><br>{preview}")
+
+    def _set_inputs_enabled(self, enabled: bool):
+        for w in (self.url_input, self.preview_btn, self.cookies_input,
+                  self.folder_input, self.mp3_bitrate_box, self.browse_btn,
+                  self.convert_box, self.template_input, self.cookies_btn,
+                  self.playlist_check, self.format_box, self.max_items):
+            w.setEnabled(enabled)
+
+    def start_download(self):
+        task = self.build_task()
+        if not self._is_valid_url(task["url"]):
+            self.log.append("Please provide a valid URL")
+            return
+
+        self.stacked_widget.setCurrentIndex(2)
+
+        if self.thread and self.thread.isRunning():
+            self.queue.append(task)
+            self._add_queue_row(task)
+            self.log.append("Added to queue")
+            return
+        self._start_task(task)
+
+    def pause_current(self):
+        if self.thread:
+            self.thread.pause()
+
+    def resume_current(self):
+        if self.thread:
+            self.thread.resume()
