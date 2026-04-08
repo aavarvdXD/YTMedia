@@ -1,4 +1,6 @@
 import os, re, sys, time, shutil, yt_dlp, platform
+from cProfile import label
+
 from download import DownloadThread
 
 from PySide6.QtCore import Qt, QThread, Signal, QSettings, QUrl, QByteArray
@@ -34,7 +36,7 @@ def get_base_path():
 
 base_dir = get_base_path()
 
-IS_WINDOWS = platform.platform() == 'Windows'
+IS_WINDOWS = platform.system() == 'Windows'
 
 class App(QWidget):
     def __init__(self):
@@ -463,3 +465,186 @@ class App(QWidget):
     def resume_current(self):
         if self.thread:
             self.thread.resume()
+
+    def cancel_current(self):
+        if self.thread:
+            self.thread.cancel()
+
+    def populate_formats(self, info):
+        self.format_box.clear()
+        self.format_box.addItem("best audio/video(auto)", "")
+        self.format_box.addItem("Audio MP3", "audio_mp3")
+        self.format_box.addItem("Audio M4A", "audio_m4a")
+        seen = set()
+        for f in info.get("formats", []):
+            ext = f.get("ext", "unknown")
+            res = f.get("resolution", "") or f"{f.get('width', '')}x{f.get('height', '')}"
+            if res == "x": res = "audio only"
+            vcodec = f.get("vcodec", "none")
+            fid = f.get("format_id", "")
+            if vcodec != "none" or res == "audio only":
+                label = f"{res} ({ext})"
+                if label not in seen:
+                    self.format_box.addItem(label, fid)
+                    seen.add(label)
+
+    def _add_queue_row(self, task):
+        row = self.queue_table.rowCount()
+        self.queue_table.insertRow(row)
+        self.queue_table.setItem(row, 0, QTableWidgetItem(task["url"]))
+        format_name = task.get("format_id") or ("best")
+        self.queue_table.setItem(row, 1, QTableWidgetItem(str(format_name)))
+
+    def _add_history(self, title, status, path):
+        row = self.history_table.rowCount()
+        self.history_table.insertRow(row)
+        self.history_table.setItem(row, 0, QTableWidgetItem(title))
+        self.history_table.setItem(row, 1, QTableWidgetItem(status))
+        item = QTableWidgetItem(time.strftime("%H:%M:%S"))
+        #store path internally so open file still works
+        item.setData(Qt.UserRole, path)
+        self.history_table.setItem(row, 2, item)
+
+    def _start_task(self, task):
+        if self.thread and self.thread.isRunning():
+            return
+        if self._clear_logs_before_next_start:
+            self.log.clear()
+            self._clear_logs_before_next_start = False
+
+        self.current_task = dict(task)
+        self.thread = DownloadThread(task, mode="download")
+        self.thread.log_signal.connect(self.update_log)
+        self.thread.progress_signal.connect(self.update_progress)
+        self.thread.done_signal.connect(self.on_done)
+        self.thread.error_signal.connect(self.on_error)
+        self.thread.status_signal.connect(self.update_log)
+        self.thread.finished.connect(self._cleanup_download_thread)
+        self.thread.start()
+
+        self.download_btn.setEnabled(False)
+        self.pause_btn.setEnabled(True)
+        self.resume_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(True)
+        self._set_inputs_enabled(False)
+        self._set_status("Downloading")
+        self.update_log(f"Starting download: {task['url']}")
+
+    def _cleanup_download_thread(self):
+        if self.thread:
+            self.thread.deleteLater()
+            self.thread = None
+
+    def update_progress(self, p):
+        pct_val = p.get("pct_val", 0.0)
+        self.progress.setValue(max(0, min(100, int(round(pct_val)))))
+        self.stats_label.setText(
+            f"{p.get('pct_raw') or f'{pct_val:.1f}%'} | Time Remaining: {p.get('eta') or '-'} | "
+            f"{p.get('downloaded') or '-'} / {p.get('total') or '-'} | {p.get('speed') or '-'}"
+        )
+
+    def on_done(self, result):
+        path = result.get("output_path", "")
+        if path and not os.path.exists(path):
+            candidate_dir = self.folder_input.text().strip()
+            if os.path.isdir(candidate_dir):
+                matches = sorted(
+                    [os.path.join(candidate_dir, x) for x in os.listdir(candidate_dir)],
+                    key=lambda p: os.path.getmtime(p),
+                    reverse=True
+                )
+                path = matches[0] if matches else path
+        self.update_log("Done!")
+        self._add_history(result.get("title", ""), "Done", path)
+
+        # reset export logs after successful conversion
+        self._clear_logs_before_next_start = True
+
+        if self.copy_path_check.isChecked() and path:
+            QApplication.clipboard().setText(path)
+        if self.open_folder_check.isChecked():
+            folder = self.folder_input.text().strip()
+            if os.path.isdir(folder):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+
+        self._finish_task("Idle")
+
+        #If queue is empty skip to step 4
+        if not self.queue:
+            self.success_path.setText(f"Find it at:\n{path}")
+
+            try: self.open_exported_btn.clicked.disconnect()
+            except: pass
+
+            target_folder = os.path.dirname(path) if os.path.isfile(path) else path
+            self.open_exported_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(target_folder)) if target_folder else None)
+
+            self.stacked_widget.setCurrentIndex(3)
+
+    def on_error(self, err):
+        self.last_error_task = dict(self.current_task) if self.current_task else None
+        self.update_log(f"{err}")
+        self._add_history(self.current_info.get("title", ""), "Error", "")
+        self._finish_task("Error")
+
+    def _finish_task(self, status):
+        self.download_btn.setEnabled(True)
+        self.pause_btn.setEnabled(False)
+        self.resume_btn.setEnabled(False)
+        self.cancel_btn.setEnabled(False)
+        self._set_inputs_enabled(True)
+        self._set_status(status)
+        if self.queue:
+            nxt = self.queue.pop(0)
+            self.queue_table.removeRow(0)
+            self._start_task(nxt)
+
+    def remove_selected_queue_item(self):
+        row = self.queue_table.currentRow()
+        if row < 0 or row >= len(self.queue):
+            return
+        self.queue.pop(row)
+        self.queue_table.removeRow(row)
+
+    def retry_last(self):
+        if not self.last_error_task:
+            self.update_log("No failed task to retry")
+            return
+        if self.thread and self.thread.isRunning():
+            self.update_log("Busy. Retry added to queue")
+            self.queue.append(dict(self.last_error_task))
+            self._add_queue_row(self.last_error_task)
+            return
+        self._start_task(self.last_error_task)
+
+    def show_history_menu(self, pos):
+        row = self.history_table.currentRow()
+        if row < 0:
+            return # no row selected
+        path_item = self.history_table.item(row, 2)
+        path = path_item.data(Qt.UserRole).strip() if path_item and path_item.data(Qt.UserRole) else None
+        menu = QMenu(self)
+        open_file = QAction("Open file", self)
+        open_folder = QAction("Open folder", self)
+        open_file.triggered.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(path)) if path else None)
+        open_folder.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path))) if path else None
+        )
+        menu.addAction(open_file)
+        menu.addAction(open_folder)
+        menu.exec(self.history_table.viewport().mapToGlobal(pos))
+
+    def update_log(self, text):
+        self.log.append(text)
+        self.log.verticalScrollBar().setValue(self.log.verticalScrollBar().maximum())
+
+    def closeEvent(self, event):
+        self.settings.setValue("last_folder", self.folder_input.text().strip())
+        self.settings.setValue("template", self.template_input.text().strip())
+        self.settings.setValue("playlist", "true" if self.playlist_check.isChecked() else "false")
+        self.settings.setValue("max_items", self.max_items.value())
+        self.settings.setValue("cookies", self.cookies_input.text().strip())
+        self.settings.setValue("mp3_bitrate", self.mp3_bitrate_box.currentText())
+        self.settings.setValue("convert_mode", self.convert_box.currentText())
+        self.settings.setValue("geometry", self.saveGeometry())
+        super().closeEvent(event)
