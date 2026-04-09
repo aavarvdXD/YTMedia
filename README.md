@@ -19,10 +19,11 @@
 
 ---
 ## Requirements
-- Python 3.10 or higher
-- FFmpeg (Bundled or available in PATH)
-- Yt_dlp
-- PySide6
+- **Python 3.10 or higher**
+- **FFmpeg** (Bundled or available in PATH)
+- **Deno** (Bundled)
+- **Yt_dlp**
+- **PySide6**
 ---
 ## Installation
 **Install dependencies**
@@ -33,3 +34,9 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+Or, you could aslo run the exe provided in the releases tab.
+
+---
+## Cookies(Age-restricted/Members-only content)
+Export cookies from your browser using a browser extension such as **Get cookies.txt LOCALLY**, then point the app to the exported file using the Cookies.. button in the options step
