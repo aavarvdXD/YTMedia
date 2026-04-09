@@ -1,6 +1,4 @@
 import os, re, sys, time, shutil, yt_dlp, platform
-from cProfile import label
-
 from download import DownloadThread
 
 from PySide6.QtCore import Qt, QThread, Signal, QSettings, QUrl, QByteArray
@@ -13,9 +11,14 @@ from PySide6.QtWidgets import (
     QMessageBox, QHeaderView, QAbstractItemView, QMenu, QStackedWidget, QMainWindow
 )
 
-#Load the font ttf
-font_id = QFontDatabase.addApplicationFont("font.ttf")
 def font():
+    global font_id
+    if 'font_id' not in globals():
+        font_id = -1
+    
+    if font_id == -1:
+        font_id = QFontDatabase.addApplicationFont("font.ttf")
+
     if font_id != -1:
         family_names = QFontDatabase.applicationFontFamilies(font_id)
         if family_names:
@@ -50,6 +53,7 @@ class App(QWidget):
         self.last_error_task = None
         self.current_info = {}
         self.net = QNetworkAccessManager(self)
+        self._active_replies = set()
         self._clear_logs_before_next_start = False
 
         self.setWindowTitle("YTMedia - Youtube Video Dowloader by Qorym")
@@ -60,7 +64,6 @@ class App(QWidget):
         root.setContentsMargins(20, 20, 20, 20)
 
         #Title, Header
-        font()
         header_label = QLabel("YT2MP Downloader Wizard")
         header_label.setFont(font())
         header_label.setAlignment(Qt.AlignCenter)
@@ -380,8 +383,8 @@ class App(QWidget):
         t.metadata_signal.connect(self.on_metadata)
         t.error_signal.connect(self.on_metadata_error)
         t.finished.connect(lambda: self._cleanup_meta_thread(t))
-        t.start()
         self.meta_thread = t
+        t.start()
 
     def _cleanup_meta_thread(self, t):
         if self.meta_thread is t:
@@ -395,6 +398,9 @@ class App(QWidget):
         self.update_log(f"{msg}")
 
     def on_metadata(self, info):
+        if not info:
+            self.on_metadata_error("Failed to fetch video information")
+            return
         self.loading_label.setText("")
         self.preview_btn.setEnabled(True)
         self.stacked_widget.setCurrentIndex(1)
@@ -407,11 +413,18 @@ class App(QWidget):
         self.populate_formats(self.current_info)
         thumb = self.current_info.get("thumbnail", "")
         if thumb:
-            self.net.get(QNetworkRequest(QUrl(thumb))).finished.connect(self._on_thumb_loaded)
+            reply = self.net.get(QNetworkRequest(QUrl(thumb)))
+            self._active_replies.add(reply)
+            reply.finished.connect(self.on_thumb_loaded)
         self.update_log(f"Metadata loaded")
 
     def on_thumb_loaded(self):
         reply = self.sender()
+        if not reply:
+            return
+        if reply in self._active_replies:
+            self._active_replies.remove(reply)
+
         data = reply.readAll()
         px = QPixmap()
         if px.loadFromData(data):
@@ -513,13 +526,14 @@ class App(QWidget):
             self._clear_logs_before_next_start = False
 
         self.current_task = dict(task)
-        self.thread = DownloadThread(task, mode="download")
+        t = DownloadThread(task, mode="download")
+        self.thread = t
         self.thread.log_signal.connect(self.update_log)
         self.thread.progress_signal.connect(self.update_progress)
         self.thread.done_signal.connect(self.on_done)
         self.thread.error_signal.connect(self.on_error)
         self.thread.status_signal.connect(self.update_log)
-        self.thread.finished.connect(self._cleanup_download_thread)
+        self.thread.finished.connect(lambda: self._cleanup_download_thread(t))
         self.thread.start()
 
         self.download_btn.setEnabled(False)
@@ -530,10 +544,17 @@ class App(QWidget):
         self._set_status("Downloading")
         self.update_log(f"Starting download: {task['url']}")
 
-    def _cleanup_download_thread(self):
-        if self.thread:
-            self.thread.deleteLater()
+    def _cleanup_download_thread(self, t):
+        if self.thread is t:
             self.thread = None
+        t.deleteLater()
+        self._check_queue()
+
+    def _check_queue(self):
+        if self.queue and not self.thread:
+            nxt = self.queue.pop(0)
+            self.queue_table.removeRow(0)
+            self._start_task(nxt)
 
     def update_progress(self, p):
         pct_val = p.get("pct_val", 0.0)
@@ -594,10 +615,6 @@ class App(QWidget):
         self.cancel_btn.setEnabled(False)
         self._set_inputs_enabled(True)
         self._set_status(status)
-        if self.queue:
-            nxt = self.queue.pop(0)
-            self.queue_table.removeRow(0)
-            self._start_task(nxt)
 
     def remove_selected_queue_item(self):
         row = self.queue_table.currentRow()

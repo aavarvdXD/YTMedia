@@ -121,7 +121,6 @@ class DownloadThread(QThread):
                 }
                 with yt_dlp.YoutubeDL(meta_opts) as ydl:
                     info = ydl.extract_info(url, download=False)
-                self.metadata_signal.emit(url, download=False)
                 self.metadata_signal.emit(info or {})
                 return
 
@@ -140,7 +139,7 @@ class DownloadThread(QThread):
                 ydl_opts["cookiefile"] = self.task["cookies"]
 
             selected = self.task.get("format_id")
-            convert_mode = self.task.get("convert_mode", "Extract audio as MP3(Default)")
+            convert_mode = self.task.get("convert_mode", "Extract Audio as MP3 (Default)")
             post = []
             if selected == "audio_mp3":
                 ydl_opts["format"] = "bestaudio/best"
@@ -154,9 +153,9 @@ class DownloadThread(QThread):
             elif selected:
                 ydl_opts["format"] = selected
             else:
-                if convert_mode == "Convert to MP4":
+                if convert_mode == "Convert video to MP4":
                     ydl_opts["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
-                elif convert_mode == "Extract audio as MP3(Default)":
+                elif convert_mode == "Extract Audio as MP3 (Default)":
                     ydl_opts["format"] = "bestaudio/best"
                     post.append({
                         "key": "FFmpegExtractAudio",
@@ -166,10 +165,10 @@ class DownloadThread(QThread):
                 else:
                     ydl_opts["format"] = "bestvideo+bestaudio/best"
 
-            if convert_mode == "Convert to MP4":
+            if convert_mode == "Convert video to MP4":
                 post.append({"key": "FFmpegVideoConvertor", "preferredformat": "mp4"})
                 ydl_opts.setdefault("postprocessor_args", {})["FFmpegVideoConvertor"] = ["-c:a", "aac"]
-            elif convert_mode == "Convert to MKV":
+            elif convert_mode == "Convert video to MKV":
                 post.append({"key": "FFmpegVideoConvertor", "preferredformat": "mkv"})
             if post:
                 ydl_opts["postprocessors"] = post

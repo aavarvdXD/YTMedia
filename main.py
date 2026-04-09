@@ -17,7 +17,7 @@ app.setFont(font())
 app.setStyleSheet(f"""
     QWidget {{
         background-color: #202124;
-        color: f1f3f4;
+        color: #f1f3f4;
         font-family: {font().family()};
         font-size: 10pt;
     }}
