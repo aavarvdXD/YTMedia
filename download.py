@@ -1,14 +1,6 @@
 import os, re, sys, time, shutil, yt_dlp, platform
 
 from PySide6.QtCore import Qt, QThread, Signal, QSettings, QUrl, QByteArray
-from PySide6.QtGui import QDesktopServices, QPixmap, QAction, QFont, QFontDatabase, QIcon
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
-from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLineEdit, QPushButton, QTextEdit, QLabel, QComboBox, QFileDialog,
-    QCheckBox, QSpinBox, QProgressBar, QTableWidget, QTableWidgetItem,
-    QMessageBox, QHeaderView, QAbstractItemView, QMenu, QStackedWidget, QMainWindow
-)
 
 class DownloadThread(QThread):
     log_signal = Signal(str)
@@ -41,13 +33,13 @@ class DownloadThread(QThread):
     def _human_error(self, err:Exception):
         s = str(err).lower()
         if "ffmpeg" in s:
-            return "FFmpeg not found/configured. Put ffmpeg.exe and ffprobe.exe in the 'ffmpeg/bin' folder in the app root directory."
+            return f"FFmpeg error: {err}"
         if "network" in s or "timed out" in s or "connection" in s or "dns" in s:
-            return "Network error. Check your connection and try again."
+            return f"Network error: {err}"
         if "login" in s or "sign in" in s or "private" in s or "members" in s or "forbidden" in s:
-            return "Restricted content. Try a valid cookies file."
+            return f"Restricted content: {err}"
         if "javascript" in s or "runtime" in s:
-            return "Javascript runtime error. Ensure deno is installed configured correctly."
+            return f"Javascript runtime error: {err}"
         return f"Download error: {err}"
 
     def _parse_percent(self, pct_str: str) -> float:
@@ -105,6 +97,11 @@ class DownloadThread(QThread):
             url = self.task["url"]
             ffmpeg_location = self._resolve_ffmpeg_location()
             deno_location = self._resolve_deno_binary()
+
+            if ffmpeg_location and os.path.isdir(ffmpeg_location):
+                current_path = os.environ.get("PATH", "")
+                if ffmpeg_location not in current_path:
+                    os.environ["PATH"] = ffmpeg_location + os.pathsep + current_path
 
             if deno_location:
                 deno_dir = os.path.dirname(deno_location)
@@ -166,10 +163,10 @@ class DownloadThread(QThread):
                     ydl_opts["format"] = "bestvideo+bestaudio/best"
 
             if convert_mode == "Convert video to MP4":
-                post.append({"key": "FFmpegVideoConvertor", "preferredformat": "mp4"})
+                post.append({"key": "FFmpegVideoConvertor", "preferedformat": "mp4"})
                 ydl_opts.setdefault("postprocessor_args", {})["FFmpegVideoConvertor"] = ["-c:a", "aac"]
             elif convert_mode == "Convert video to MKV":
-                post.append({"key": "FFmpegVideoConvertor", "preferredformat": "mkv"})
+                post.append({"key": "FFmpegVideoConvertor", "preferedformat": "mkv"})
             if post:
                 ydl_opts["postprocessors"] = post
 

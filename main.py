@@ -13,19 +13,21 @@ from PySide6.QtWidgets import (
 
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon("icon.ico"))
-app.setFont(font())
+cached_app_font = font()
+font_family = cached_app_font.family()
+app.setFont(cached_app_font)
 app.setStyleSheet(f"""
     QWidget {{
         background-color: #202124;
         color: #f1f3f4;
-        font-family: {font().family()};
+        font-family: {font_family};
         font-size: 10pt;
     }}
     #Card {{
         background-color: #2b2b2b;
         border-radius: 8px;
         border: 1px solid #3c3c3c;
-        font-family: {font().family()};
+        font-family: {font_family};
     }}
     QLineEdit, QTextEdit , QComboBox, QSpinBox , QTableWidget {{
         background-color: #303134;
@@ -33,7 +35,15 @@ app.setStyleSheet(f"""
         border: 1px solid #5f6368; 
         border-radius: 5px; 
         padding: 5px 12px; 
-        font-family: {font().family()};
+        font-family: {font_family};
+        font-weight: bold;
+    }}
+    QPushButton {{
+        background-color: #3c4043;
+        color: #f1f3f4;
+        border: 1px solid #5f6368;
+        border-radius: 6px;
+        padding: 5px 15px;
         font-weight: bold;
     }}
     QPushButton:hover {{ 
@@ -51,6 +61,7 @@ app.setStyleSheet(f"""
         background-color: #4169E1; 
         color: white; 
         border: none; 
+        border-radius: 6px;
     }}
     #PrimaryButton:hover {{ 
         background-color: #2754e3; 
@@ -69,19 +80,19 @@ app.setStyleSheet(f"""
     QTableWidget {{ 
         gridline-color: #444; 
         border: 1px solid #444;
-        font-family: {font().family()}; 
+        font-family: {font_family}; 
     }}
     QHeaderView::section {{ 
         background-color: #3c4043; 
         padding: 4px; 
         border: 1px solid #444; 
         font-weight: bold; 
-        font-family: {font().family()};
+        font-family: {font_family};
     }}
     QTableWidget::item:selected {{ 
         background-color: #4169E1; 
         color: white; 
-        font-family: {font().family()};
+        font-family: {font_family};
     }}
 """)
 

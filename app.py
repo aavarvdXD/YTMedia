@@ -11,8 +11,13 @@ from PySide6.QtWidgets import (
     QMessageBox, QHeaderView, QAbstractItemView, QMenu, QStackedWidget, QMainWindow
 )
 
+_cached_font = None
+
 def font():
-    global font_id
+    global font_id, _cached_font
+    if _cached_font is not None:
+        return _cached_font
+
     if 'font_id' not in globals():
         font_id = -1
     
@@ -23,14 +28,17 @@ def font():
         family_names = QFontDatabase.applicationFontFamilies(font_id)
         if family_names:
             family = family_names[0]
-            font = QFont(family, 16)
-            font.setBold(True)
-            return font
+            f = QFont(family, 16)
+            f.setBold(True)
+            _cached_font = f
+            return f
         else:
             print("Font loaded, but no family names found.")
     else:
         print("Failed to load font.")
-    return QFont("Arial", 16, QFont.Bold)
+
+    _cached_font = QFont("Arial", 16, QFont.Bold)
+    return _cached_font
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -327,6 +335,7 @@ class App(QWidget):
         self.open_exported_btn = QPushButton("Open Folder")
         self.open_exported_btn.setFont(font())
         self.open_exported_btn.setMinimumHeight(50)
+        self.open_exported_btn.clicked.connect(self._open_success_folder)
 
         self.new_download_btn = QPushButton("Start Another Download")
         self.new_download_btn.setFont(font())
@@ -346,6 +355,11 @@ class App(QWidget):
 
         self.setLayout(root)
         self.restoreGeometry(self.settings.value("geometry", QByteArray()))
+
+    def _open_success_folder(self):
+        folder = getattr(self, '_current_success_folder', None)
+        if folder:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
 
     def reset_to_start(self):
         self.url_input.setText("")
@@ -593,13 +607,7 @@ class App(QWidget):
         #If queue is empty skip to step 4
         if not self.queue:
             self.success_path.setText(f"Find it at:\n{path}")
-
-            try: self.open_exported_btn.clicked.disconnect()
-            except: pass
-
-            target_folder = os.path.dirname(path) if os.path.isfile(path) else path
-            self.open_exported_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(target_folder)) if target_folder else None)
-
+            self._current_success_folder = os.path.dirname(path) if os.path.isfile(path) else path
             self.stacked_widget.setCurrentIndex(3)
 
     def on_error(self, err):
