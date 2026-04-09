@@ -25,7 +25,11 @@
 - PySide6
 ---
 ## Installation
-1. Clone the repository:
-   ```bash
-   git clone
-   ```
+**Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+**Run with python**
+```bash
+python main.py
+```
