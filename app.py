@@ -379,6 +379,20 @@ class App(QWidget):
     def _is_valid_url(self, url):
         return bool(re.match(r"^https?://", url))
 
+    def _default_output_folder(self):
+        home = os.path.expanduser("~")
+        downloads = os.path.join(home, "Downloads")
+        return downloads if os.path.isdir(downloads) else home
+
+    def _normalize_output_folder(self, folder: str) -> str:
+        candidate = os.path.abspath(os.path.expanduser((folder or "").strip()))
+        if not candidate:
+            return self._default_output_folder()
+        drive, tail = os.path.splitdrive(os.path.normpath(candidate))
+        if drive and tail in (os.sep, ""):
+            return self._default_output_folder()
+        return candidate
+
     def preview_url(self):
         url = self.url_input.text().strip()
         if not self._is_valid_url(url):
@@ -446,9 +460,11 @@ class App(QWidget):
         reply.deleteLater()
 
     def build_task(self):
+        folder = self._normalize_output_folder(self.folder_input.text())
+        self.folder_input.setText(folder)
         return {
             "url": self.url_input.text().strip(),
-            "folder": self.folder_input.text().strip() or os.path.expanduser("~"),
+            "folder": folder,
             "template": self.template_input.text().strip() or "%(title)s.%(ext)s",
             "format_id": self.format_box.currentData(),
             "convert_mode": self.convert_box.currentText(),

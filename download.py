@@ -48,30 +48,55 @@ class DownloadThread(QThread):
         m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", pct_str.strip())
         return float(m.group(1)) if m else 0.0
 
+    def _candidate_roots(self):
+        base_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
+        roots = [base_dir]
+        meipass = getattr(sys, "_MEIPASS", "")
+        if meipass:
+            roots.append(meipass)
+        return roots
+
+    def _default_download_folder(self) -> str:
+        home = os.path.expanduser("~")
+        downloads = os.path.join(home, "Downloads")
+        return downloads if os.path.isdir(downloads) else home
+
+    def _is_drive_root(self, folder: str) -> bool:
+        norm = os.path.normpath(folder or "")
+        drive, tail = os.path.splitdrive(norm)
+        return bool(drive) and tail in (os.sep, "")
+
+    def _ensure_output_folder(self, folder: str) -> str:
+        candidate = os.path.abspath(os.path.expanduser(folder or "")).strip()
+        if not candidate or self._is_drive_root(candidate):
+            candidate = self._default_download_folder()
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            probe_file = os.path.join(candidate, ".ytmedia_write_test")
+            with open(probe_file, "w", encoding="utf-8"):
+                pass
+            os.remove(probe_file)
+            return candidate
+        except OSError:
+            fallback = self._default_download_folder()
+            os.makedirs(fallback, exist_ok=True)
+            return fallback
+
     def _resolve_deno_binary(self) -> str:
-        base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
-        canditates = [base_dir]
-        if hasattr(sys, "_MEIPASS"):
-            canditates.append(sys._MEIPASS)
-        for root in canditates:
+        for root in self._candidate_roots():
             deno_path = os.path.join(root, "deno", "deno.exe")
             if os.path.isfile(deno_path):
                 return deno_path
         return ""
 
     def _resolve_ffmpeg_location(self) -> str:
-        base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
-        canditates = [base_dir]
-        meipass = getattr(sys, "_MEIPASS", "")
-        if meipass:
-            canditates.append(meipass)
-        for root in canditates:
+        for root in self._candidate_roots():
             bin_dir = os.path.join(root, "ffmpeg","bin")
             ffmpeg_exe = os.path.join(bin_dir, "ffmpeg.exe")
             ffprobe_exe = os.path.join(bin_dir, "ffprobe.exe")
             if os.path.isfile(ffmpeg_exe) and os.path.isfile(ffprobe_exe):
                 return bin_dir
-        return base_dir
+        return ""
 
     def run(self):
         def hook(d):
@@ -87,6 +112,7 @@ class DownloadThread(QThread):
                     "eta": str(d.get("_eta_str", "")).strip(),
                     "downloaded": str(d.get("_downloaded_bytes_str", "")).strip(),
                     "total": str(d.get("_total_bytes_str", d.get("_total_bytes_estimate_str", ""))).strip(),
+                    "speed": str(d.get("_speed_str", "")).strip(),
                 }
                 self.progress_signal.emit(payload)
             elif d.get("status") == "finished":
@@ -95,6 +121,9 @@ class DownloadThread(QThread):
 
         try:
             url = self.task["url"]
+            output_folder = self._ensure_output_folder(self.task.get("folder", ""))
+            if output_folder != self.task.get("folder"):
+                self.log_signal.emit(f"Output folder adjusted to writable path: {output_folder}")
             ffmpeg_location = self._resolve_ffmpeg_location()
             deno_location = self._resolve_deno_binary()
 
@@ -114,8 +143,9 @@ class DownloadThread(QThread):
                     "quiet": True,
                     "skip_download": True,
                     "noplaylist": False,
-                    "ffmpeg_location": ffmpeg_location
                 }
+                if ffmpeg_location:
+                    meta_opts["ffmpeg_location"] = ffmpeg_location
                 with yt_dlp.YoutubeDL(meta_opts) as ydl:
                     info = ydl.extract_info(url, download=False)
                 self.metadata_signal.emit(info or {})
@@ -123,12 +153,14 @@ class DownloadThread(QThread):
 
             ydl_opts = {
                 "progress_hooks": [hook],
-                "outtmpl": os.path.join(self.task["folder"], self.task["template"]),
+                "outtmpl": os.path.join(output_folder, self.task["template"]),
                 "noplaylist": not self.task["playlist"],
                 "retries": 3,
                 "quiet": True,
-                "ffmpeg_location": ffmpeg_location
+                "windowsfilenames": True,
             }
+            if ffmpeg_location:
+                ydl_opts["ffmpeg_location"] = ffmpeg_location
 
             if self.task["max_items"] > 0:
                 ydl_opts["playlistend"] = self.task["max_items"]

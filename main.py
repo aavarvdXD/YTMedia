@@ -42,7 +42,7 @@ app.setStyleSheet(f"""
         background-color: #3c4043;
         color: #f1f3f4;
         border: 1px solid #5f6368;
-        border-radius: 6px;
+        border-radius: 12px;
         padding: 5px 15px;
         font-weight: bold;
     }}
@@ -61,7 +61,7 @@ app.setStyleSheet(f"""
         background-color: #4169E1; 
         color: white; 
         border: none; 
-        border-radius: 6px;
+        border-radius: 12px;
     }}
     #PrimaryButton:hover {{ 
         background-color: #2754e3; 
