@@ -50,6 +50,10 @@ class DownloadThread(QThread):
         m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", pct_str.strip())
         return float(m.group(1)) if m else 0.0
 
+    def _is_http_403_error(self, err: Exception) -> bool:
+        s = str(err).lower()
+        return "http error 403" in s or "forbidden" in s
+
     def _candidate_roots(self):
         base_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
         roots = [base_dir]
@@ -158,8 +162,10 @@ class DownloadThread(QThread):
                 "outtmpl": os.path.join(output_folder, self.task["template"]),
                 "noplaylist": not self.task["playlist"],
                 "retries": 3,
+                "extractor_retries": 3,
                 "quiet": True,
                 "windowsfilenames": True,
+                "source_address": "0.0.0.0",
             }
             if ffmpeg_location:
                 ydl_opts["ffmpeg_location"] = ffmpeg_location
@@ -204,11 +210,38 @@ class DownloadThread(QThread):
             if post:
                 ydl_opts["postprocessors"] = post
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True) or {}
-                title = info.get("title", "Unknown")
-                prepared = ydl.prepare_filename(info) if info else ""
-                final_path = self._last_path or prepared
+            fallback_attempts = [
+                ("default client", None),
+                ("android client", {"youtube": {"player_client": ["android"]}}),
+                ("ios client", {"youtube": {"player_client": ["ios"]}}),
+            ]
+
+            info = {}
+            title = "Unknown"
+            final_path = ""
+            last_exc = None
+
+            for idx, (label, extractor_args) in enumerate(fallback_attempts):
+                attempt_opts = dict(ydl_opts)
+                if extractor_args:
+                    attempt_opts["extractor_args"] = extractor_args
+                try:
+                    with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                        info = ydl.extract_info(url, download=True) or {}
+                        title = info.get("title", "Unknown")
+                        prepared = ydl.prepare_filename(info) if info else ""
+                        final_path = self._last_path or prepared
+                    last_exc = None
+                    break
+                except Exception as e:
+                    last_exc = e
+                    if not self._is_http_403_error(e) or label == fallback_attempts[-1][0]:
+                        raise
+                    next_label = fallback_attempts[idx + 1][0]
+                    self.log_signal.emit(f"HTTP 403 received, retrying with {next_label}...")
+
+            if last_exc:
+                raise last_exc
             self.done_signal.emit({"output_path": final_path or "", "url": url, "title": title})
 
         except Exception as e:
