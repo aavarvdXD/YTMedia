@@ -36,7 +36,9 @@ class DownloadThread(QThread):
             return f"FFmpeg error: {err}"
         if "network" in s or "timed out" in s or "connection" in s or "dns" in s:
             return f"Network error: {err}"
-        if "login" in s or "sign in" in s or "private" in s or "members" in s or "forbidden" in s:
+        if "http error 403" in s or "forbidden" in s:
+            return f"Access denied (HTTP 403): {err}"
+        if "login" in s or "sign in" in s or "private" in s or "members" in s or "age-restricted" in s:
             return f"Restricted content: {err}"
         if "javascript" in s or "runtime" in s:
             return f"Javascript runtime error: {err}"
